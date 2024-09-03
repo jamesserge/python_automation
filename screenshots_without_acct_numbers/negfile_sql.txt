@@ -1,0 +1,89 @@
+SELECT * FROM (
+
+WITH ACCOUNT_TABLE AS (
+
+--Query for 7XX reject codes
+SELECT rej.ASSOC_ACCT_NUM AS ACCT_NUM, 
+       REJ.RDFI AS ROUTING_NUMBER, 
+       rej.REJ_RSN AS ERROR_CODE, 
+       lu.SHORT_DESCRIPTION AS ERROR_DESCRIPTION, 
+       CO.PT_MBR_ENT AS COMPANY_ID, 
+       CO.COMPANY_NAME, 
+       rej.ORD_ID AS ORDER_ID, 
+       rej.DT_CR
+       --, ROW_NUMBER() OVER (PARTITION BY ORD_ID ORDER BY ASSOC_ACCT_NUM) AS rnk
+FROM TH_FE_REJECT_DETAIL rej,
+TH_MS_COMPANY co,
+TH_MS_TRANSACTION_DIVISION TDIV,
+TH_LU_FE_REJECT_REASON_CD lu,
+WHERE CO.COMPANY_ID = TDIV.COMPANY_ID
+AND REJ.DIV_ID = TDIV.DIV_ID
+AND lu.reject_reason_cd = rej.REJ_RSN (+)
+  AND lu.TARGET_QUEUE = 'CIG_OPS'
+  AND (
+       (assoc_acct_num = '[REDACTED]' AND co.pt_mbr_ent = '[REDACTED]')
+       OR (assoc_acct_num = '[REDACTED]' AND co.pt_mbr_ent = '[REDACTED]')
+       OR (assoc_acct_num = '[REDACTED]' AND co.pt_mbr_ent = '[REDACTED]')
+       OR (assoc_acct_num = '[REDACTED]' AND co.pt_mbr_ent = '[REDACTED]')
+       OR (assoc_acct_num = '[REDACTED]' AND co.pt_mbr_ent = '[REDACTED]')
+       OR (assoc_acct_num = '[REDACTED]' AND co.pt_mbr_ent = '[REDACTED]')
+       OR (assoc_acct_num = '[REDACTED]' AND co.pt_mbr_ent = '[REDACTED]')
+       OR (assoc_acct_num = '[REDACTED]' AND co.pt_mbr_ent = '[REDACTED]')
+       OR (assoc_acct_num = '[REDACTED]' AND co.pt_mbr_ent = '[REDACTED]')
+       OR (assoc_acct_num = '[REDACTED]' AND co.pt_mbr_ent = '[REDACTED]')
+       OR (assoc_acct_num = '[REDACTED]' AND co.pt_mbr_ent = '[REDACTED]')
+       OR (assoc_acct_num = '[REDACTED]' AND co.pt_mbr_ent = '[REDACTED]')
+  )
+
+UNION ALL
+
+--Query for RXX chargeback codes
+SELECT pde.pde_acct_num AS ACCT_NUM, 
+       rd.RDFI AS ROUTING_NUMBER, 
+       PDE.CO_REASON AS ERROR_CODE, 
+       DES.NAME AS ERROR_DESCRIPTION, 
+       co.PT_MBR_ENT AS COMPANY_ID, 
+       co.COMPANY_NAME, 
+       pde.MRCHT_ORDER_NUM AS ORDER_ID, 
+       pde.INITIATED_DATE AS DT_CR
+       --,ROW_NUMBER() OVER (PARTITION BY pde.MRCHT_ORDER_NUM ORDER BY pde.pde_acct_num) AS rnk
+FROM 
+TH_PDE_DETAIL pde,
+TH_PDE_ECP_ADD RD,
+TH_MS_COMPANY co,
+TH_MS_TRANSACTION_DIVISION TDIV,
+TH_LU_CB_REASON_CODE DES
+
+WHERE pde.pde = rd.pde
+  AND CO.COMPANY_ID = TDIV.COMPANY_ID
+  AND TDIV.DIV_ID = PDE.DIV_ID
+  AND pde.CO_REASON NOT IN ('R01', 'R08')
+  AND PDE.CO_REASON (+)= DES.CO_REASON AND pde.PDE_STD_ACT = 'MATCH'
+  AND (
+       (pde.pde_acct_num = '[REDACTED]' AND CO.PT_MBR_ENT = '[REDACTED]')
+       OR (pde.pde_acct_num = '[REDACTED]' AND CO.PT_MBR_ENT = '[REDACTED]')
+       OR (pde.pde_acct_num = '[REDACTED]' AND CO.PT_MBR_ENT = '[REDACTED]')
+       OR (pde.pde_acct_num = '[REDACTED]' AND CO.PT_MBR_ENT = '[REDACTED]')
+       OR (pde.pde_acct_num = '[REDACTED]' AND CO.PT_MBR_ENT = '[REDACTED]')
+       OR (pde.pde_acct_num = '[REDACTED]' AND CO.PT_MBR_ENT = '[REDACTED]')
+       OR (pde.pde_acct_num = '[REDACTED]' AND CO.PT_MBR_ENT = '[REDACTED]')
+       OR (pde.pde_acct_num = '[REDACTED]' AND CO.PT_MBR_ENT = '[REDACTED]')
+       OR (pde.pde_acct_num = '[REDACTED]' AND CO.PT_MBR_ENT = '[REDACTED]')
+       OR (pde.pde_acct_num = '[REDACTED]' AND CO.PT_MBR_ENT = '[REDACTED]')
+       OR (pde.pde_acct_num = '[REDACTED]' AND CO.PT_MBR_ENT = '[REDACTED]')
+       OR (pde.pde_acct_num = '[REDACTED]' AND CO.PT_MBR_ENT = '[REDACTED]')
+  )
+
+-- WHERE rnk = 1
+)
+SELECT ACCT_NUM, 
+       ROUTING_NUMBER, 
+       ERROR_CODE, 
+       ERROR_DESCRIPTION, 
+       COMPANY_ID, 
+       COMPANY_NAME, 
+       ORDER_ID, 
+       DT_CR, 
+       ROW_NUMBER() OVER (PARTITION BY ACCT_NUM ORDER BY DT_CR DESC) AS rnk 
+FROM ACCOUNT_TABLE 
+WHERE rnk = 1;
